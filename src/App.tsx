@@ -1,58 +1,38 @@
-import { Admin, Resource, CustomRoutes, Loading, DataProvider } from 'react-admin';
-import { Route } from 'react-router-dom';
-import MyLayout from './components/Layout';
-import { Suspense, useEffect, useState } from 'react';
-import { Person } from '@mui/icons-material';
+import { Admin, Resource } from "react-admin";
+import localStorageDataProvider from "ra-data-local-storage";
 
-import { getDataProvider } from './providers/dataProvider';
-import autProvider from './providers/authProvider';
+import UserList from "./components/UserList";
+import UserEdit from "./components/UserEdit";
+import { users, posts, saveDataToLocalStorage } from "./utils";
+import authProvider from "./utils/authProvider";
+import LoginPage from "./views/LoginPage";
+import UserView from "./components/UserView";
+import { useEffect } from "react";
+import PostList from "./components/PostList";
 
-// pages
-import Welcome from './pages/Welcome';
-
-// resources
-import users from './resources/users';
-import audit from './resources/audit';
-
-const LoadingPage = <Loading loadingPrimary="Loading" loadingSecondary="" />
+const dataProvider = localStorageDataProvider({
+  defaultData: {
+    users,
+  },
+});
 
 function App() {
-	const [dataProvider, setDataProvider] = useState<DataProvider>();
+  useEffect(() => {
+    const localUser = localStorage.getItem("user");
+    const localposts = localStorage.getItem("posts");
+    if (!localUser || !localposts) saveDataToLocalStorage();
+  }, []);
 
-	const handleGetProvider = () => {
-		if (dataProvider) return;
-		getDataProvider().then(setDataProvider)
-	}
-
-	useEffect(handleGetProvider, [dataProvider])
-
-	if (!dataProvider) return LoadingPage;
-
-	return (
-		<Suspense
-			fallback={LoadingPage}
-		>
-			<Admin
-				dataProvider={dataProvider}
-				authProvider={autProvider(dataProvider)}
-				layout={MyLayout}
-			>
-				{(permissions) => {
-					return [
-						...(permissions == 'admin'
-							? [
-								<Resource icon={Person} name="users" {...users} />,
-								<Resource name="audit" {...audit} />,
-							]
-							: []),
-						<CustomRoutes>
-							<Route path="/" element={<Welcome />} />
-						</CustomRoutes>,
-					];
-				}}
-			</Admin>
-		</Suspense>
-	);
+  return (
+    <Admin
+      loginPage={LoginPage}
+      authProvider={authProvider}
+      dataProvider={dataProvider}
+    >
+      <Resource name="posts" list={PostList} />
+      <Resource name="users" show={UserView} list={UserList} edit={UserEdit} />
+    </Admin>
+  );
 }
 
 export default App;
